@@ -25,7 +25,7 @@ def extract_frames(video_path):
     return frames
 
 
-def pad_resize(frame, target_width=1280, target_height=720):
+def pad_frame(frame, target_width=1280, target_height=720):
     org_height, org_width = frame.shape[:2]
     scale = min(target_height / org_height, target_width / org_width)
 
@@ -42,7 +42,7 @@ def pad_resize(frame, target_width=1280, target_height=720):
     return new_frame, x_offset, new_width
 
 
-def inpaint_frame(frame, mask, pipeline):
+def inpainting_frame(frame, mask, pipeline):
     # frame and mask are resized to 512x512 for inpainting
     frame_resized = cv2.resize(frame, (512, 512))
     mask_resized = cv2.resize(mask, (512, 512))
@@ -62,7 +62,7 @@ def inpaint_frame(frame, mask, pipeline):
         print(f"Error in inpainting frame: {e}")
         return frame
     
-def reconstruct_video(frames, output_video_path, fps=3):
+def assemble_frames_to_video(frames, output_video_path, fps=3):
     height, width, _ = frames[0].shape
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
@@ -71,21 +71,21 @@ def reconstruct_video(frames, output_video_path, fps=3):
     out.release()
 
 
-def converter(input_video, output_video, frame_rate_reduction=1):
+def HD_Video_Conversion(input_video, output_video, frame_rate_reduction=1):
 
     frames = extract_frames(input_video)
 
     inpainted_frames = []
     for i, frame in enumerate(frames):
         if i % frame_rate_reduction == 0:  # Process frames based on reduction
-            padded_frame, start_x, new_width = pad_resize(frame)
+            padded_frame, start_x, new_width = pad_frame(frame)
             mask = np.zeros_like(padded_frame[:, :, 0])
             mask[:, :start_x] = 1
             mask[:, start_x + new_width:] = 1
-            inpainted_frame = inpaint_frame(padded_frame, mask, pipeline)
+            inpainted_frame = inpainting_frame(padded_frame, mask, pipeline)
             inpainted_frames.append(inpainted_frame)
 
     if not output_video.endswith('.mp4'):
         output_video += '.mp4'
-    reconstruct_video(inpainted_frames, output_video)
+    assemble_frames_to_video(inpainted_frames, output_video)
     return output_video
